@@ -144,6 +144,10 @@ protected:
     {
         broadcasting_audio_=b;
     }
+    void SetTouchRotate(bool d)
+    {
+        touch_rotate_=d;
+    }
     virtual void OnXRCommand(ptree pt){}
     
     void PreParseXRCommand();
@@ -166,6 +170,9 @@ private:
     std::queue<std::string>             cmd_que_;
     std::mutex                          cmd_mutex_;
     bool                                avReady_;
+    bool                                bMyEcho_;
+    
+    bool                                touch_rotate_;
     
 
     std::string                         tv_name_;

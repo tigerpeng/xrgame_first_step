@@ -153,9 +153,10 @@ void Mahjong::Start()
         std::stringstream ss(strJson);
         read_json(ss, pt);
         serverURL=pt.get("tracker","p4sp://2020@tracker.ournet.club:9700/mj");
+        avServer_=pt.get("av","2020@192.168.0.100:9700");
         
+        //?del
         token_=pt.get("token",token_);
-        avServer_=pt.get("av",avServer_);
     }catch (ptree_error & e) {
     }catch (...) {
     }
@@ -163,57 +164,11 @@ void Mahjong::Start()
     // Execute base class startup
     Sample::Start();        //必须
     SetLogoVisible(false);
+    SetTouchRotate(false);   //禁止触摸旋转屏幕
+    
     ConnectNetWork(serverURL,strJson);
     
-    
     NewRound();
-    
-//    //test test test test test test test test test test test test test test test test test test test test test
-//    //测试游戏中玩家信息
-//    std::vector<std::string> infos;
-//    infos.push_back("张三");
-//    infos.push_back("李四");
-//    infos.push_back("王五");
-//    infos.push_back("赵六");
-//    SetPlayerInfo(infos);
-//
-//    std::map<int,int> cards;
-//    cards.insert(std::make_pair(1, 1));
-//    cards.insert(std::make_pair(11, 4));
-//    ShowHuInfo(cards);
-//
-//
-    
-    //测试一圈结束后用户信息
-//    int index=0;
-//    std::string avatar="";
-//    std::string name="微风吹过";
-//    int piaoBase=5;
-//    std::vector<int> cardsPub;
-//        cardsPub.push_back(1);
-//        cardsPub.push_back(1);
-//        cardsPub.push_back(1);
-//        cardsPub.push_back(5);
-//        cardsPub.push_back(5);
-//        cardsPub.push_back(5);
-//    std::vector<int> cardsHanle;
-////        cardsHanle.push_back(1);
-////        cardsHanle.push_back(2);
-////        cardsHanle.push_back(3);
-////        cardsHanle.push_back(4);
-////        cardsHanle.push_back(5);
-////        cardsHanle.push_back(6);
-//        cardsHanle.push_back(7);
-//        cardsHanle.push_back(8);
-//        cardsHanle.push_back(9);
-//        cardsHanle.push_back(11);
-//        cardsHanle.push_back(12);
-//        cardsHanle.push_back(13);
-//        cardsHanle.push_back(14);
-//    int card=19;
-//    std::string total="总分:18";
-//    std::string score="漂分:7 杠 2 番 8";
-//    CreateRoundResultRow(index,avatar,name,piaoBase,cardsPub,cardsHanle,card,total,score);
 }
 //游戏准备
 void Mahjong::GameReady(std::string const& jsonInfo)

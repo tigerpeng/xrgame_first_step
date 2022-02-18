@@ -59,7 +59,10 @@ Sample::Sample(Context* context) :
     avReady_=false;
     broadcasting_video_=false;
     broadcasting_audio_=true;
+    touch_rotate_=true;
     timer_counter_=std::chrono::steady_clock::now();
+    
+    bMyEcho_=false;
 }
 
 void Sample::Setup()
@@ -369,8 +372,9 @@ void Sample::HandleKeyDown(StringHash /*eventType*/, VariantMap& eventData)
 void Sample::HandleSceneUpdate(StringHash /*eventType*/, VariantMap& eventData)
 {
     PreParseXRCommand();
+        
     // Move the camera by touch, if the camera node is initialized by descendant sample class
-    if (touchEnabled_ && cameraNode_)
+    if (touchEnabled_ && cameraNode_ &&touch_rotate_)
     {
         Input* input = GetSubsystem<Input>();
         for (unsigned i = 0; i < input->GetNumTouches(); ++i)
@@ -567,8 +571,14 @@ void Sample::CheckSouderChange()
         if(souder->GetAttenuation()>0.0f)
         {
             size_t nodeID=souder->GetNode()->GetID();
-            if(nodeID<0xFF&&nodeID!=clientObjectID_) //不接受自己的音频
-                currSounder.insert(nodeID);
+            if(nodeID<0xFF)
+            {
+                if(nodeID==clientObjectID_&&bMyEcho_)
+                    currSounder.insert(nodeID);//时候接受自己的音频回放
+                else
+                    currSounder.insert(nodeID);
+            }
+                
         }
             
         ++it;

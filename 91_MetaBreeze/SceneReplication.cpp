@@ -107,8 +107,8 @@ SceneReplication::SceneReplication(Context* context) :
     ,firstPerson_(false)
 {
     //默认值
-    //game_server_    ="192.168.0.100:2345";
-    game_server_    ="game.ournet.club:2345";
+    //game_server_    ="game.ournet.club:2345";
+    game_server_    ="192.168.0.100:2345";
     room_id_        =1;            //自动创建
     av_server_      ="2020@192.168.0.100:9700";
         
