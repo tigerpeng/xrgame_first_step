@@ -105,8 +105,8 @@ int64_t verifyToken(std::string const& bt)
     {
         //Decode
         auto dec_obj = jwt::decode(token, algorithms({"HS256"}), secret(key));
-        std::cout << dec_obj.header() << std::endl;
-        std::cout << dec_obj.payload() << std::endl;
+        //std::cout << dec_obj.header() << std::endl;
+        //std::cout << dec_obj.payload() << std::endl;
         
         /*
          {"alg":"HS256","typ":"JWT"}   //dec_obj.header()
@@ -156,7 +156,7 @@ std::string DecodeAudioRoomJWT(std::string const&token)
 {
     using namespace jwt::params;
     auto dec_obj = jwt::decode(token, algorithms({"HS256"}), secret(key));
-    std::cout<<dec_obj.payload()<<std::endl;
+    //std::cout<<dec_obj.payload()<<std::endl;
     
     std::stringstream ss;
     ss<<dec_obj.payload();

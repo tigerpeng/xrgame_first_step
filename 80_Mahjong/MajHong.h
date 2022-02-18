@@ -23,7 +23,7 @@
 #pragma once
 
 //#include "Sample.h"
-#include "../Sample.h"
+#include "../SampleXR.h"
 
 #include "desk.h"
 #include <chrono>

@@ -46,6 +46,7 @@ else()
     set(OPENSSL_LIBRARIES crypto)
 endif()
 
+
 ## add for beast
 #SET(CMAKE_BUILD_TYPE "Debug")
 SET(CMAKE_CXX_FLAGS_DEBUG "$ENV{CXXFLAGS} -O0 -Wall -g2 -ggdb")
@@ -97,6 +98,11 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wrange-loop-analysis")
 endif ()
 endif()
 
+  set(CMAKE_CXX_STANDARD 14)
+  set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+
+
 # Must come before Boost includes, otherwise the
 # IDE sees the wrong file due to boost/ symlinks.
 include_directories (include)
@@ -137,7 +143,6 @@ include_directories(${PROJECT_SOURCE_DIR}/../../android/launcher-app/src/main/cp
 #message(${CMAKE_SOURCE_DIR})
 
 
-
 # add by copyleft
 file(GLOB_RECURSE project_headers *.h *.hpp)
 file(GLOB_RECURSE project_c *.c)
@@ -165,7 +170,7 @@ if(ANDROID_TOOLCHAIN)
 elseif(APPLE)
     link_directories(/Users/leeco/breeze/prj_build/moneytalks/output/libs/Debug)
 
-    target_link_libraries(${TARGET_NAME} boost_system /Users/leeco/breeze/prj_build/moneytalks/output/libs/Debug/libfacepower.dylib)
+    target_link_libraries(${TARGET_NAME} boost_system ${OPENSSL_LIBRARIES} /Users/leeco/breeze/prj_build/moneytalks/output/libs/Debug/libfacepower.dylib)
 elseif(UNIX)
     message(STATUS "当前平台:${CMAKE_SYSTEM} Linux 仅编译服务器端程序 无需连接facepower....")
 else()
