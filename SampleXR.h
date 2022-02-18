@@ -25,6 +25,26 @@
 #include <Urho3D/Engine/Application.h>
 #include <Urho3D/Input/Input.h>
 
+
+//音视频编解码/网络接口 add by copyleft
+#include <facepower/api_facepower.h>
+#include "LiveVideo.h"
+
+#include <queue>
+#include <string>
+#include <thread>
+#include <mutex>
+#include <chrono>
+
+//boost
+#include <boost/format.hpp>
+//fro xml and json
+#include <boost/property_tree/ptree.hpp>
+#include <boost/property_tree/json_parser.hpp>
+#include <boost/foreach.hpp>
+using namespace boost::property_tree;
+
+
 namespace Urho3D
 {
 
@@ -116,6 +136,41 @@ private:
     unsigned screenJoystickSettingsIndex_;
     /// Pause flag.
     bool paused_;
+    
+
+protected:
+    void AVReady(std::string const& avServer,std::string const& verify,std::string const& nodeName="",int matIndex=0);
+    void SetSpeaker(bool b)
+    {
+        broadcasting_audio_=b;
+    }
+    virtual void OnXRCommand(ptree pt){}
+    
+    void PreParseXRCommand();
+    
+    unsigned                            clientObjectID_{};
+    FacePowerPtr                        facepower_;
+private:
+    void CheckSouderChange();
+    void RecordXRCommand(std::string const& cmdStr);
+   
+    void BroadCastingVideo(bool cast=true);
+
+    //分组的语音视频以及权限管理
+    std::shared_ptr<IXRGroup>           xrGroup_;
+    
+    bool                                broadcasting_audio_;
+    std::shared_ptr<live_audio>         la_;
+    std::shared_ptr<LiveVideo>          lv_;
+    
+    std::queue<std::string>             cmd_que_;
+    std::mutex                          cmd_mutex_;
+    bool                                avReady_;
+    
+
+    std::string                         tv_name_;
+    bool                                broadcasting_video_;
+    std::chrono::steady_clock::time_point           timer_counter_;
 };
 
-#include "Sample.inl"
+#include "SampleXR.inl"

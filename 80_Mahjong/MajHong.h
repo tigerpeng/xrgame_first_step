@@ -22,7 +22,9 @@
 
 #pragma once
 
-#include "Sample.h"
+//#include "Sample.h"
+#include "../Sample.h"
+
 #include "desk.h"
 #include <chrono>
 #include <map>

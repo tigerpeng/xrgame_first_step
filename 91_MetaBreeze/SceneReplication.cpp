@@ -903,7 +903,7 @@ void SceneReplication::HandleClientObjectID(StringHash eventType, VariantMap& ev
     
     
     //开始创建xr 音视频组
-    AVReady(av_server_,token_,room_id_,clientObjectID_,hash.CString(),"TV",4);
+    AVReady(av_server_,hash.CString(),"TV",4);
     
 //    //登陆语音视频服务器
 //    xrGroup_=facepower_->createXRGroup(av_server_id_

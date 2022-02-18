@@ -17,5 +17,5 @@ static const unsigned short SERVER_PORT = 2345;
 static const StringHash E_CLIENTOBJECTID("ClientObjectID");
 // Identifier for the node ID parameter in the event data
 static const StringHash P_ID("ID");
-static const StringHash HASH_ID("HASH");
+static const StringHash HASH_ID("RoomToken");
 

@@ -82,6 +82,91 @@ namespace spd = spdlog;
 #include "BaseInfo.h"
 #include "NetworkMessage.h"
 
+#include "jwt/jwt.hpp"
+//验证用户token是否合法
+std::string key="THIS IS USED TO SIGN AND VERIFY JWT TOKENS, REPLACE IT WITH YOUR OWN SECRET, IT CAN BE ANY STRING";
+int64_t verifyToken(std::string const& bt)
+{
+    std::string token=bt;
+    size_t ptS=token.find(" ");//去掉Bearer 前缀
+    if(ptS!=std::string::npos)
+    {
+        ptS++;
+        token=token.substr(ptS,token.length()-ptS);
+    }
+    
+    int64_t UserId;
+    //算法参考
+    //https://github.com/arun11299/cpp-jwt
+    using namespace jwt::params;
+    //auto key = "THIS IS USED TO SIGN AND VERIFY JWT TOKENS, REPLACE IT WITH YOUR OWN SECRET, IT CAN BE ANY STRING"; //Secret to use for the algorithm
+    //std::string key=lobby_mj::GetLobby()->get_secret();
+    try
+    {
+        //Decode
+        auto dec_obj = jwt::decode(token, algorithms({"HS256"}), secret(key));
+        std::cout << dec_obj.header() << std::endl;
+        std::cout << dec_obj.payload() << std::endl;
+        
+        /*
+         {"alg":"HS256","typ":"JWT"}   //dec_obj.header()
+         {"exp":1571625330,"iat":1571020530,"nbf":1571020530,"unique_name":"10001"} // dec_obj.payload()
+         */
+        ptree pt;
+        std::stringstream ss;
+        ss<<dec_obj.payload();
+        read_json(ss, pt);
+        
+        UserId= pt.get("unique_name",0);
+        //过期时间
+        uint64_t exp=pt.get("exp",0);
+        
+        //spd::trace("verify user token  id:{}",uid_);
+        
+        return UserId;
+    }catch (ptree_error & e) {
+        //spd::trace("json parse exception");
+    }catch (...) {
+        //spd::trace("json parse unknown exception 解析 token 异常!");
+    }
+    return UserId;
+}
+
+std::string CreateAudioRoomJWT(int64_t rid,int64_t uid,int64_t ndx)
+{
+    using namespace jwt::params;
+    
+    //Create JWT object
+    //jwt::jwt_object obj{algorithm("HS256"), payload({{"name","penghong"},{"birthday","2001-1-1"}}), secret(key)};
+    jwt::jwt_object obj{algorithm("HS256"), payload({}), secret(key)};
+
+    obj.add_claim("rid",rid)
+        .add_claim("uid",uid)
+        .add_claim("ndx",ndx)
+        .add_claim("exp", std::chrono::system_clock::now() + std::chrono::seconds{60});
+    
+    //Get the encoded string/assertion
+    auto enc_str = obj.signature();
+    //std::cout << enc_str << std::endl;
+    std::stringstream ss;
+    ss<<enc_str;
+    return ss.str();
+}
+std::string DecodeAudioRoomJWT(std::string const&token)
+{
+    using namespace jwt::params;
+    auto dec_obj = jwt::decode(token, algorithms({"HS256"}), secret(key));
+    std::cout<<dec_obj.payload()<<std::endl;
+    
+    std::stringstream ss;
+    ss<<dec_obj.payload();
+    
+    return ss.str();
+}
+
+
+
+
 
 Room::Room(Context* context)
 :Object(context)
@@ -277,15 +362,19 @@ void Room::OnClientSceneLoaded(Connection* c)
         VariantMap remoteEventData;
         remoteEventData[P_ID] = serverObjects_[c]->GetNode()->GetID();
             //token=hash(roomid+userid+nodeid+"yoyo151210")
-            std::string s;
-            s=std::to_string(serverObjects_[c]->GetRoomID());
-            s+=std::to_string(serverObjects_[c]->GetUserID());
-            s+=std::to_string(serverObjects_[c]->GetNode()->GetID());
-        
-//            std::hash<std::string> hash_fn;
-//            size_t hash =hash_fn(s);
-            boost::compute::detail::sha1 sha1 {s};
-            std::string str { sha1 };
+//            std::string s;
+//            s=std::to_string(serverObjects_[c]->GetRoomID());
+//            s+=std::to_string(serverObjects_[c]->GetUserID());
+//            s+=std::to_string(serverObjects_[c]->GetNode()->GetID());
+//
+////            std::hash<std::string> hash_fn;
+////            size_t hash =hash_fn(s);
+//            boost::compute::detail::sha1 sha1 {s};
+//            std::string str { sha1 };
+//
+        std::string str=CreateAudioRoomJWT(serverObjects_[c]->GetRoomID()
+                                           ,serverObjects_[c]->GetUserID()
+                                           ,serverObjects_[c]->GetNode()->GetID());
         
         
         remoteEventData[HASH_ID]=String(str.c_str());

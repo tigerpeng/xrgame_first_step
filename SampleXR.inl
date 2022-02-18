@@ -42,6 +42,7 @@
 #include <Urho3D/Resource/XMLFile.h>
 #include <Urho3D/IO/Log.h>
 
+
 Sample::Sample(Context* context) :
     Application(context),
     yaw_(0.0f),
@@ -52,6 +53,13 @@ Sample::Sample(Context* context) :
     screenJoystickSettingsIndex_(M_MAX_UNSIGNED),
     paused_(false)
 {
+    
+    facepower_=getFacePower();
+    clientObjectID_=0;
+    avReady_=false;
+    broadcasting_video_=false;
+    broadcasting_audio_=true;
+    timer_counter_=std::chrono::steady_clock::now();
 }
 
 void Sample::Setup()
@@ -61,7 +69,7 @@ void Sample::Setup()
     engineParameters_[EP_LOG_NAME]     = GetSubsystem<FileSystem>()->GetAppPreferencesDir("urho3d", "logs") + GetTypeName() + ".log";
     engineParameters_[EP_FULL_SCREEN]  = false;
     engineParameters_[EP_HEADLESS]     = false;
-    engineParameters_[EP_SOUND]        = false;
+    engineParameters_[EP_SOUND]        = true;
 
     // Construct a search path to find the resource prefix with two entries:
     // The first entry is an empty path which will be substituted with program/bin directory -- this entry is for binary when it is still in build tree
@@ -94,10 +102,18 @@ void Sample::Start()
     SubscribeToEvent(E_KEYUP, URHO3D_HANDLER(Sample, HandleKeyUp));
     // Subscribe scene update event
     SubscribeToEvent(E_SCENEUPDATE, URHO3D_HANDLER(Sample, HandleSceneUpdate));
+    
 }
 
 void Sample::Stop()
 {
+    la_.reset();
+    if(facepower_){
+        facepower_->setVideoCallBack(nullptr);
+        facepower_->setLiveAudio(nullptr);
+        facepower_->cmd("{\"cmd\":\"appExit\"}");
+    }
+    
     engine_->DumpResources(true);
 }
 
@@ -352,6 +368,7 @@ void Sample::HandleKeyDown(StringHash /*eventType*/, VariantMap& eventData)
 
 void Sample::HandleSceneUpdate(StringHash /*eventType*/, VariantMap& eventData)
 {
+    PreParseXRCommand();
     // Move the camera by touch, if the camera node is initialized by descendant sample class
     if (touchEnabled_ && cameraNode_)
     {
@@ -384,7 +401,9 @@ void Sample::HandleSceneUpdate(StringHash /*eventType*/, VariantMap& eventData)
             }
         }
     }
+    
 }
+
 
 void Sample::HandleTouchBegin(StringHash /*eventType*/, VariantMap& eventData)
 {
@@ -412,4 +431,227 @@ void Sample::HandleMouseModeChange(StringHash /*eventType*/, VariantMap& eventDa
     Input* input = GetSubsystem<Input>();
     bool mouseLocked = eventData[MouseModeChanged::P_MOUSELOCKED].GetBool();
     input->SetMouseVisible(!mouseLocked);
+}
+
+void Sample::BroadCastingVideo(bool cast)
+{
+    broadcasting_video_=cast;
+    
+    //打开摄像头
+    char sCMD[1024];
+    int devIndex=0;
+    int len=0;
+    if(cast)
+        len=::sprintf(sCMD, "{\"cmd\":\"openCamera\",\"devIndex\":%d}",devIndex);
+    else
+        len=::sprintf(sCMD, "{\"cmd\":\"closeCamera\",\"devIndex\":%d}",devIndex);
+    
+    std::string sCommand(sCMD,len);
+    if(xrGroup_)
+        xrGroup_->cmd(sCommand);
+}
+
+void Sample::RecordXRCommand(std::string const& cmdStr)
+{
+    std::lock_guard<std::mutex> lock(cmd_mutex_);
+    cmd_que_.push(cmdStr);
+}
+
+//解析命令
+void Sample::PreParseXRCommand()
+{
+    //采用定时器可以提高新能
+    std::chrono::duration<double> timeDura = std::chrono::duration_cast<std::chrono::duration<double>>(std::chrono::steady_clock::now() - timer_counter_);
+    
+    if(timeDura.count()<1) //1秒
+        return ;
+
+    timer_counter_=std::chrono::steady_clock::now();
+    
+    
+    
+    
+    //检查是否开启视频
+    if(clientObjectID_>0&&!tv_name_.empty())
+    {
+        Node* myselfNode=scene_->GetNode(clientObjectID_);
+        Node* tvNode= scene_->GetChild(tv_name_.c_str(), true);
+        if(myselfNode&&tvNode)
+        {
+            auto pos1=myselfNode->GetPosition();
+            
+            auto pos2=tvNode->GetPosition();
+            
+            float distance=pos1.DistanceToPoint(pos2);
+            
+            if(distance<2)
+            {   if(!broadcasting_video_)
+                    BroadCastingVideo(true);
+            }else if(distance>2)
+            {
+                if(broadcasting_video_)
+                    BroadCastingVideo(false);
+                
+            }
+        }
+    }
+    
+    //实时更新
+    if(avReady_)
+        CheckSouderChange();
+        
+        
+    std::string cmdStr;
+    {
+        std::lock_guard<std::mutex> lock(cmd_mutex_);
+        if(cmd_que_.size()>0)
+        {
+            cmdStr=cmd_que_.front();
+            cmd_que_.pop();
+        }else
+            return ;
+    }
+    
+    //
+    try{
+        ptree pt;
+        std::stringstream ss(cmdStr);
+        read_json(ss, pt);
+        const std::string cmd=pt.get("cmd","");
+        
+        if("roomInit"==cmd)
+        {//xrGroup_ 收到编码的opus数据后回调
+            avReady_=true;
+        /*
+            auto cb=std::bind(&live_audio::on_encoded_frame,la_,
+                              std::placeholders::_1,std::placeholders::_2,std::placeholders::_3);
+            xrGroup_->setXRDataHandle(0,cb);
+         */
+            //开始语音通信
+            if(la_)
+            {
+                la_->setScene(scene_,xrGroup_);
+                la_->startCaptureForOpus();
+            }
+            
+           /*
+            if(2==clientObjectID_)
+            {
+                BroadCastingVideo(true);
+            }
+            */
+             
+            
+            OnXRCommand(pt);
+        }
+        
+    }catch (ptree_error & e) {
+        //spd::error("json error where:{},{},{} ", __FILE__,__LINE__,__FUNCTION__);
+    }catch (...) {
+        //spd::error("unknown exception where:{},{},{} ", __FILE__,__LINE__,__FUNCTION__);
+    }
+    
+
+    
+    //调用虚函数让下层处理
+}
+
+void Sample::CheckSouderChange()
+{
+    std::set<int> currSounder;
+    const PODVector<SoundSource*>&  vt=GetSubsystem<Audio>()->GetSoundSources();
+    auto it=vt.Begin();
+    while(it!=vt.End())
+    {
+        auto* souder=(*it);
+        if(souder->GetAttenuation()>0.0f)
+        {
+            size_t nodeID=souder->GetNode()->GetID();
+            if(nodeID<0xFF&&nodeID!=clientObjectID_) //不接受自己的音频
+                currSounder.insert(nodeID);
+        }
+            
+        ++it;
+    }
+    
+    PODVector<int> subscribeNode=la_->GetChangeSounder(currSounder);
+    
+    
+    if(subscribeNode.Size()>0)
+    {
+        std::string sounders;
+        for(size_t i=0;i<subscribeNode.Size();++i)
+        {
+            if(!sounders.empty())
+                sounders+=",";
+            
+            sounders+=std::to_string(subscribeNode[i]);
+        }
+        
+        
+        char sCMD[1024];
+        int len=::sprintf(sCMD, "{\"cmd\":\"updateSounder\",\"where\":\"91_MetaBreeze\",\"sounders\":[%s]}",sounders.c_str());
+        std::string sCommand(sCMD,len);
+        
+        if(xrGroup_)
+            xrGroup_->cmd(sCommand);
+    }
+}
+
+//1 视频的model 名称
+//2 材质通道 TV 4
+void Sample::AVReady(std::string const& avServer,std::string const& verify,std::string const& nodeName,int matIndex)
+{
+    
+    if(!nodeName.empty())
+    {
+        tv_name_=nodeName;
+        //设置视频
+        lv_=std::make_shared<LiveVideo>(context_);
+        //准备视频回放
+        facepower_->setVideoCallBack(std::bind(&LiveVideo::OnVideoFrame
+                                                   , lv_
+                                                   , std::placeholders::_1
+                                                   , std::placeholders::_2
+                                                   , std::placeholders::_3 ));
+        
+        auto on_metarial = [this,nodeName,matIndex](SharedPtr<Material> outputMaterial)
+        {
+            Node* tvNode= scene_->GetChild(tv_name_.c_str(), true);
+            if(tvNode)
+            {
+                StaticModel* sm = tvNode->GetComponent<StaticModel>();
+                //sm->SetMaterial(0, outputMaterial);
+                sm->SetMaterial(matIndex, outputMaterial);
+                
+                //测试其他模型贴材质的效果
+                Node* boxNode = this->scene_->GetChild("box1", true);
+                if(boxNode)
+                {
+                    StaticModel* smBox=boxNode->GetComponent<StaticModel>();
+                    smBox->SetMaterial(0,outputMaterial);
+                }
+            }
+        };
+        lv_->SetMaterailReady(on_metarial);
+    }
+
+   
+    //注册命令回调
+    facepower_->registerCommand(std::bind(&Sample::RecordXRCommand, this, std::placeholders::_1));
+    
+    
+    //设置音频
+    la_=std::make_shared<live_audio>(broadcasting_audio_);
+    /*
+    auto baseliveaudio=std::dynamic_pointer_cast<ILiveAudio>(la_);
+    if(facepower_)
+        facepower_->setLiveAudio(baseliveaudio);
+     */
+    //登陆语音视频服务器
+    xrGroup_=facepower_->createXRGroup(avServer,verify);
+    //注册命令回调
+    xrGroup_->registerCommand(std::bind(&Sample::RecordXRCommand, this, std::placeholders::_1));
+    
+    
 }

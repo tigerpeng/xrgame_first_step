@@ -27,6 +27,25 @@ endif ()
 # Define target name
 set (TARGET_NAME 90_MetaServer)
 
+
+#修复mac 无法找到openssl 库
+if (CMAKE_SYSTEM_NAME MATCHES "Linux")
+    find_package(OpenSSL REQUIRED)
+    include_directories(${OPENSSL_INCLUDE_DIR})
+elseif (CMAKE_SYSTEM_NAME MATCHES "Windows")
+    message(STATUS "current platform: Windows")
+elseif (CMAKE_SYSTEM_NAME MATCHES "FreeBSD")
+    message(STATUS "current platform: FreeBSD")
+else()
+    include_directories(/usr/local/opt/openssl@1.1/include)
+    link_directories(/usr/local/opt/openssl@1.1/lib)
+
+
+    set(OPENSSL_INCLUDE_DIR /usr/local/opt/openssl@1.1/include)
+    set(CRYPTO_LIB /usr/local/opt/openssl@1.1/lib)
+    set(OPENSSL_LIBRARIES crypto)
+endif()
+
 ## add for beast
 #SET(CMAKE_BUILD_TYPE "Debug")
 SET(CMAKE_CXX_FLAGS_DEBUG "$ENV{CXXFLAGS} -O0 -Wall -g2 -ggdb")

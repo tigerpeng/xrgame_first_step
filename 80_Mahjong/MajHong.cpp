@@ -143,6 +143,7 @@ void Mahjong::Start()
    
     if(strJson.empty())
     {   //mac 使用本地调试 //\"tblNO\":6000,
+        //type 定义游戏类型 2 人 3 人
         strJson="{\"cmd\":\"login\",\"type\":3,\"wait\":\"true\",\"uid\":10001,\"db\":\"http://db.ournet.club:2021/\",\"tracker\":\"p4sp://2020@192.168.0.100:9700/mj\",\"token\":\"Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1bmlxdWVfbmFtZSI6IjEwMDAxIiwibmJmIjoxNjQ0OTEyNjM5LCJleHAiOjE2NDc1MDQ2MzksImlhdCI6MTY0NDkxMjYzOX0.Zrr4ctQfSUs_uNPrrwMlZZI10xOHGiPY4PvKdruiaH0\",\"profile\":{\"uid\":\"10001\",\"avatar\":\"1.jpg\",\"name\":\"彭洪\",\"sex\":0,\"birthday\":\"2000-01-24\"}}";
     }
     
@@ -154,8 +155,7 @@ void Mahjong::Start()
         serverURL=pt.get("tracker","p4sp://2020@tracker.ournet.club:9700/mj");
         
         token_=pt.get("token",token_);
-        avServer_="2020@192.168.0.100:9700";
-        
+        avServer_=pt.get("av",avServer_);
     }catch (ptree_error & e) {
     }catch (...) {
     }
@@ -763,7 +763,7 @@ void Mahjong::SetPlayerInfo(std::vector<std::string>& infos,std::vector<std::str
     //将我的位置索引转换为语音房间的索引;
     clientObjectID_=myPos+2;
     //进入语音房间
-    AVReady(avServer_,token_,rid,clientObjectID_,rToken,"");
+    AVReady(avServer_,rToken,"");
     
     //调整发声位置
     Node* desktNode=scene_->GetChild("Desk");
