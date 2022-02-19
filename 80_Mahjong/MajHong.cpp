@@ -1492,18 +1492,17 @@ void Mahjong::CreateScene()
     
     //增加一个灯光
     Node* lightNode2 = scene_->CreateChild("PointLight");
-    lightNode2->SetPosition(Vector3(0.0f, 50.0f, -70.0f));
+    lightNode2->SetPosition(Vector3(0.0f, 50.0f, -70.0f));//-70
     
     auto* light2 = lightNode2->CreateComponent<Light>();
     light2->SetLightType(LIGHT_POINT);
-    light2->SetRange(100.0f);
+    light2->SetRange(120.0f);
     light2->SetColor(Color(0.5f, 0.5f, 0.5f));
     light2->SetBrightness(3.0f);
     
     //增加一个灯光
     Node* lightNode3 = scene_->CreateChild("PointLight");
-    lightNode3->SetPosition(Vector3(0.0f, 50.0f, 0.0f));
-    
+    lightNode3->SetPosition(Vector3(0.0f, 50.0f, 70.0f));
     auto* light3 = lightNode3->CreateComponent<Light>();
     light3->SetLightType(LIGHT_POINT);
     light3->SetRange(120.0f);
@@ -1582,7 +1581,7 @@ void Mahjong::CreateScene()
 
     //加载骰子模型
     Node* diceNode = scene_->CreateChild("Dice");
-    diceNode->SetPosition(Vector3(0.f, 15.f,0.f));
+    diceNode->SetPosition(Vector3(0.f, 2.5f,0.f));
     diceNode->SetRotation(Quaternion(0, 90, 0));
 
     diceNode->SetScale(5);
@@ -1594,7 +1593,7 @@ void Mahjong::CreateScene()
     diceObject->SetMaterial(2,cache->GetResource<Material>("Models/mahjong/Materials/dice0.xml"));
     diceObject->SetMaterial(3,cache->GetResource<Material>("Models/mahjong/Materials/dice3.xml"));
     auto* rotator = diceNode->CreateComponent<Rotator>();
-    rotator->SetRotationSpeed(Vector3(10.0f, 20.0f, 30.0f));
+    rotator->SetRotationSpeed(Vector3(50.0f, 20.0f, 30.0f));
     
     
 
