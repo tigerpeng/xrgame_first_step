@@ -101,7 +101,7 @@ Mahjong::Mahjong(Context* context)
 :Sample(context)
 ,musicSource_(0)
 ,countDown_(false)
-,bMusicOn_(true)
+,bMusicOn_(false)
 ,bAdjustCamera_(false)
 {
     // Register an object factory for our custom Rotator component so that we can create them to scene nodes
@@ -161,11 +161,10 @@ void Mahjong::Start()
     // Execute base class startup
     Sample::Start();        //必须
     SetLogoVisible(false);
-    //SetTouchRotate(false);   //禁止触摸旋转屏幕
-    
-    ConnectNetWork(serverURL,strJson);
-    
+    SetTouchRotate(false);   //禁止触摸旋转屏幕
+
     NewRound();
+    ConnectNetWork(serverURL,strJson);
 }
 //游戏准备
 void Mahjong::GameReady(std::string const& jsonInfo)

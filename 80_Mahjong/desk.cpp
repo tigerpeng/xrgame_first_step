@@ -116,16 +116,14 @@ void Desk::ConnectNetWork(std::string const& url,std::string const& firstCMD)
     if(nullptr==facepower_){
         facepower_=getFacePower();
         
-        facepower_->cmd("{\"cmd\":\"appStart\",\"appID\":80}");
-        
-        
+        //facepower_->cmd("{\"cmd\":\"appStart\",\"appID\":80}");
         #if defined _WIN32
 
         #elif defined  __APPLE__
 
         #elif defined __ANDROID__
                 //登录 p4sp
-                facepower_->cmd(firstCMD);//mac 下调试没有宿主程序启动 因此需要自己登录
+                //facepower_->cmd(firstCMD);//mac 下调试没有宿主程序启动 因此需要自己登录
         #endif
     }
     
