@@ -107,9 +107,6 @@ Mahjong::Mahjong(Context* context)
     // Register an object factory for our custom Rotator component so that we can create them to scene nodes
     context->RegisterFactory<Rotator>();
     
-    
-    //game server。     游戏同步
-    //game server_2     游戏过程
     //avserer
     SetSpeaker(false);
     volume_music_=0;
@@ -144,7 +141,7 @@ void Mahjong::Start()
     if(strJson.empty())
     {   //mac 使用本地调试 //\"tblNO\":6000,
         //type 定义游戏类型 2 人 3 人
-        strJson="{\"cmd\":\"login\",\"type\":3,\"wait\":\"true\",\"uid\":10001,\"db\":\"http://db.ournet.club:2021/\",\"tracker\":\"p4sp://2020@192.168.0.100:9700/mj\",\"token\":\"Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1bmlxdWVfbmFtZSI6IjEwMDAxIiwibmJmIjoxNjQ0OTEyNjM5LCJleHAiOjE2NDc1MDQ2MzksImlhdCI6MTY0NDkxMjYzOX0.Zrr4ctQfSUs_uNPrrwMlZZI10xOHGiPY4PvKdruiaH0\",\"profile\":{\"uid\":\"10001\",\"avatar\":\"1.jpg\",\"name\":\"彭洪\",\"sex\":0,\"birthday\":\"2000-01-24\"}}";
+        strJson="{\"cmd\":\"login\",\"type\":3,\"wait\":\"true\",\"uid\":10001,\"db\":\"http://db.ournet.club:2021/\",\"tracker\":\"p4sp://2020@tracker.ournet.club:9700/mj\",\"token\":\"Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1bmlxdWVfbmFtZSI6IjEwMDAxIiwibmJmIjoxNjQ0OTEyNjM5LCJleHAiOjE2NDc1MDQ2MzksImlhdCI6MTY0NDkxMjYzOX0.Zrr4ctQfSUs_uNPrrwMlZZI10xOHGiPY4PvKdruiaH0\",\"profile\":{\"uid\":\"10001\",\"avatar\":\"1.jpg\",\"name\":\"彭洪\",\"sex\":0,\"birthday\":\"2000-01-24\"}}";
     }
     
     try
@@ -153,7 +150,7 @@ void Mahjong::Start()
         std::stringstream ss(strJson);
         read_json(ss, pt);
         serverURL=pt.get("tracker","p4sp://2020@tracker.ournet.club:9700/mj");
-        avServer_=pt.get("av","2020@192.168.0.100:9700");
+        avServer_=pt.get("av","2020@tracker.ournet.club:9700");
         
         //?del
         token_=pt.get("token",token_);
@@ -164,7 +161,7 @@ void Mahjong::Start()
     // Execute base class startup
     Sample::Start();        //必须
     SetLogoVisible(false);
-    SetTouchRotate(false);   //禁止触摸旋转屏幕
+    //SetTouchRotate(false);   //禁止触摸旋转屏幕
     
     ConnectNetWork(serverURL,strJson);
     
@@ -1227,8 +1224,15 @@ void Mahjong::ShowButton(std::string const& btns,int32_t seconds)
         auto btnArray = s_split(btns, "[\\s,;?]+");
         for(auto c:btnArray)
         {
-            if(!c.empty())
+            if(!c.empty()){
                 btnMaps_[c]->SetVisible(true);
+                if(c=="亮")
+                {
+                    auto pTxt=btnMaps_[c]->GetChildStaticCast<Text>("ShowOrNo",true);
+                    if(pTxt)
+                        pTxt->SetText("亮");
+                }
+            }
         }
     }
 
@@ -1266,7 +1270,7 @@ Button* Mahjong::CreateButton(int x, int y, int xSize, int ySize, const String& 
     button->SetSize(xSize, ySize);
 
     Text* buttonText = button->CreateChild<Text>();
-    buttonText->SetName("liangOrNo");
+    buttonText->SetName("ShowOrNo");
     buttonText->SetAlignment(HA_CENTER, VA_CENTER);
     buttonText->SetFont(font, 36);//12
     buttonText->SetText(text);
@@ -1947,13 +1951,12 @@ void Mahjong::HandleAction(StringHash eventType, VariantMap& eventData)
     std::string btnName=soundResourceName.CString();
     if(btnName=="亮")
     {   //亮按钮 为开关按钮
-        auto pTxt=button->GetChildStaticCast<Text>("liangOrNo",true);
+        auto pTxt=button->GetChildStaticCast<Text>("ShowOrNo",true);
         std::string showName=pTxt->GetText().CString();
         if(showName=="亮")
             pTxt->SetText("不亮");
         else if(showName=="不亮")
             pTxt->SetText("亮");
-        
         SendAction(showName);
         return ;
     }
