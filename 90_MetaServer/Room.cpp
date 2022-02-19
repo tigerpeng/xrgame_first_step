@@ -350,6 +350,52 @@ void Room::CreateTV()
 
     auto* shape = objectNode->CreateComponent<CollisionShape>();
     shape->SetBox(Vector3::ONE);
+    
+    objectNode->Scale(3.0);
+    
+    
+    //创建其他建筑
+    // Create mushrooms of varying sizes
+    const unsigned NUM_MUSHROOMS = 60;
+    for (unsigned i = 0; i < NUM_MUSHROOMS; ++i)
+    {
+        Node* objectNode = scene_->CreateChild("Mushroom");
+        objectNode->SetPosition(Vector3(Random(180.0f) - 90.0f, 0.0f, Random(180.0f) - 90.0f));
+        objectNode->SetRotation(Quaternion(0.0f, Random(360.0f), 0.0f));
+        objectNode->SetScale(2.0f + Random(5.0f));
+        auto* object = objectNode->CreateComponent<StaticModel>();
+        object->SetModel(cache->GetResource<Model>("Models/Mushroom.mdl"));
+        object->SetMaterial(cache->GetResource<Material>("Materials/Mushroom.xml"));
+        object->SetCastShadows(true);
+
+        auto* body = objectNode->CreateComponent<RigidBody>();
+        body->SetCollisionLayer(2);
+        auto* shape = objectNode->CreateComponent<CollisionShape>();
+        shape->SetTriangleMesh(object->GetModel(), 0);
+    }
+
+    // Create movable boxes. Let them fall from the sky at first
+    const unsigned NUM_BOXES = 100;
+    for (unsigned i = 0; i < NUM_BOXES; ++i)
+    {
+        float scale = Random(2.0f) + 0.5f;
+
+        Node* objectNode = scene_->CreateChild("Box");
+        objectNode->SetPosition(Vector3(Random(180.0f) - 90.0f, Random(10.0f) + 10.0f, Random(180.0f) - 90.0f));
+        objectNode->SetRotation(Quaternion(Random(360.0f), Random(360.0f), Random(360.0f)));
+        objectNode->SetScale(scale);
+        auto* object = objectNode->CreateComponent<StaticModel>();
+        object->SetModel(cache->GetResource<Model>("Models/Box.mdl"));
+        object->SetMaterial(cache->GetResource<Material>("Materials/Stone.xml"));
+        object->SetCastShadows(true);
+
+        auto* body = objectNode->CreateComponent<RigidBody>();
+        body->SetCollisionLayer(2);
+        // Bigger boxes will be heavier and harder to move
+        body->SetMass(scale * 2.0f);
+        auto* shape = objectNode->CreateComponent<CollisionShape>();
+        shape->SetBox(Vector3::ONE);
+    }
 }
 void Room::OnClientSceneLoaded(StringHash /*eventType*/, VariantMap& eventData)
 {
