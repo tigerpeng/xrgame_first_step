@@ -195,6 +195,8 @@ private:
 //add by copyleft
 private:
     void OnXRCommand(ptree pt) override;
+    void SetModel(int indexID,std::string const& avatar);
+    void HandleExit(StringHash eventType, VariantMap& eventData);
     
     /// del
     void FixRobotSound();

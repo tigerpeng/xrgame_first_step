@@ -75,6 +75,7 @@ using namespace boost::property_tree;
 
 
 
+
 #include <Urho3D/DebugNew.h>
 
 //// UDP port we will use
@@ -109,10 +110,19 @@ SceneReplication::SceneReplication(Context* context) :
     //默认值
     //game_server_    ="game.ournet.club:2345";
     game_server_    ="192.168.0.100:2345";
-    room_id_        =1;            //自动创建
-    av_server_      ="2020@192.168.0.100:9700";
-        
-    token_="Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1bmlxdWVfbmFtZSI6IjEwMDAxIiwibmJmIjoxNjQ0OTE4MzUxLCJleHAiOjE2NDc1MTAzNTEsImlhdCI6MTY0NDkxODM1MX0.gFc7ApkQYuv4JvOZKkRlJ5prxMvAseorRYePVi2YJhI";
+    room_id_        =10000;            //自动创建
+    av_server_      ="192.168.0.100:9700";
+    
+
+    /*
+    token_="Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1bmlxdWVfbmFtZSI6IjEwMDAyIiwibmJmIjoxNjQ1MzYzMTU1LCJleHAiOjE2NDc5NTUxNTUsImlhdCI6MTY0NTM2MzE1NX0.f-pJ1ASh-jvPPSgTee14DacaE3ix0QkPivCQCZIDnGM";
+     
+     token_="Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1bmlxdWVfbmFtZSI6IjEwMDA1IiwibmJmIjoxNjQ1Mzc5Njc3LCJleHAiOjE2NDc5NzE2NzcsImlhdCI6MTY0NTM3OTY3N30._j8K3ZEz_d2Eei6prXrCfANAiSve_QVvj0b76cGn7Bs";
+    
+     */
+
+
+
     
     
     // Register factory and attributes for the Character component so it can be created via CreateComponent, and loaded / saved
@@ -125,13 +135,6 @@ SceneReplication::SceneReplication(Context* context) :
 }
 SceneReplication::~SceneReplication()
 {
-//    la_.reset();
-//
-//    if(facepower_){
-//        facepower_->setVideoCallBack(nullptr);
-//        facepower_->setLiveAudio(nullptr);
-//        facepower_->cmd("{\"cmd\":\"appExit\"}");
-//    }
 }
 void SceneReplication::Setup()
 {
@@ -205,6 +208,7 @@ void SceneReplication::Setup()
     }catch (ptree_error & e) {
     }catch (...) {
     }
+    
 }
 
 void SceneReplication::Start()
@@ -233,17 +237,7 @@ void SceneReplication::Start()
     String cacheDir=dir+"cache/";
     GetSubsystem<Network>()->SetPackageCacheDir(cacheDir);
 
- 
-//    //正常启动，这里不会执行到
-//    if(bootJson_.empty())
-//    {       //\"tracker\":\"p4sp://2020@tracker.ournet.club:9700/mj\"
-//            //\"tracker\":\"p4sp://2020@192.168.0.100:9700/mj\"
-//        bootJson_="{\"cmd\":\"login\",\"wait\":\"true\",\"uid\":10002,\"db\":\"http://db.ournet.club:2021/\",\"tracker\":\"p4sp://p4sp://2020@192.168.0.100:9700/mj\",\"token\":\"Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1bmlxdWVfbmFtZSI6IjEwMDAxIiwibmJmIjoxNjQ0OTE4MzUxLCJleHAiOjE2NDc1MTAzNTEsImlhdCI6MTY0NDkxODM1MX0.gFc7ApkQYuv4JvOZKkRlJ5prxMvAseorRYePVi2YJhI\",\"profile\":{\"uid\":\"10002\",\"avatar\":\"default\",\"name\":\"彭洪\",\"sex\":1,\"birthday\":\"2000-01-24\"}}";
-//        //模拟登陆
-//        if(facepower_)
-//            facepower_->cmd(bootJson_);//登录
-//    }
-
+    
     // Execute base class startup
     Sample::Start();
     if (touchEnabled_)
@@ -270,10 +264,29 @@ void SceneReplication::Start()
     Sample::InitMouseMode(MM_RELATIVE);
     
     
+    //加载xml 布局 增加测试功能
+    UIElement* root = GetSubsystem<UI>()->GetRoot();
+    auto layout=cache->GetResource<XMLFile>("UI/91_debug.xml");
+    SharedPtr<UIElement>  xmlDebug=GetSubsystem<UI>()->LoadLayout(layout);
+    root->AddChild(xmlDebug);
+    auto imgBotton=xmlDebug->GetChildStaticCast<Button>("btnMusic",true);
+    if(imgBotton)
+    {
+        imgBotton->SetPressedOffset(0,0);
+        SubscribeToEvent(imgBotton, E_PRESSED, URHO3D_HANDLER(SceneReplication, HandleExit));
+    }
+    
+    
+    //mac 使用本地调试 需要手动登录tracker服务器 192.168.20.133
+
+    std::string cmdLogin=str(boost::format("{\"cmd\":\"login\",\"tracker\":\"%s\",\"token\":\"%s\"}")%av_server_%token_);
+    LoginP4SP(cmdLogin);
+    
     
     VariantMap eventData;
     HandleConnect({},eventData);
 }
+
 
 void SceneReplication::CreateScene()
 {
@@ -655,11 +668,15 @@ void SceneReplication::HandlePostUpdate(StringHash eventType, VariantMap& eventD
         packetCounterTimer_.Reset();
     }
     
-//    //设置显示信息
-//    String  info="My indexID: " + String(clientObjectID_);
-//    if(la_)
-//            info+="  3dsource:"+String(la_->GetSubcribeSounderCount());
-//    myInfo_->SetText(info);
+    //设置显示信息
+    String  info="My indexID: " + String(clientObjectID_);
+    if(avReady_)
+        info+=" avServer is ready";
+    else
+        info+=" avServer is connecting...";
+    info+=" 3dSounder:";
+    info+=+debug_info_.c_str();
+    myInfo_->SetText(info);
     
     //ParseCommand(); 
 }
@@ -888,57 +905,12 @@ void SceneReplication::HandleClientObjectID(StringHash eventType, VariantMap& ev
             SoundListener *listener = objectNode->CreateComponent<SoundListener>();
             if(listener)
                 GetSubsystem<Audio>()->SetListener(listener);
-            
-            
-
-            //设置音量
-            //GetSubsystem<Audio>()->SetMasterGain(SOUND_VOICE, 0.6);
-
-//           SoundSource3D* snd_source_3d =   objectNode->CreateComponent<SoundSource3D>();
-//                snd_source_3d->SetNearDistance(3);
-//                snd_source_3d->SetFarDistance(20);
-        
         }
     }
     
     
     //开始创建xr 音视频组
     AVReady(av_server_,hash.CString(),"TV",4);
-    
-//    //登陆语音视频服务器
-//    xrGroup_=facepower_->createXRGroup(av_server_id_
-//                                       ,room_id_,clientObjectID_,hash.CString());
-//
-//    //注册命令回调
-//    xrGroup_->registerCommand(std::bind(&SceneReplication::OnCommand, this, std::placeholders::_1));
-//
-//    //等待连接成功后，才开始采集发送数据
-    
-    
-    
-
-    
-    
-    
-//    //开始音视频 设置场景
-//    if(use_internal_av_)
-//    {//使用游戏服务器传输交换音频
-//        la_->startCapture(scene_,GetSubsystem<Network>());
-//         auto cb=std::bind(&SceneReplication::OnEncodeAACFrame,this,std::placeholders::_1,std::placeholders::_2,std::placeholders::_3);
-//
-//         facepower_->startAudioCapture(cb);
-//    }else
-//    {
-//        //使用独立的音视频服务器
-//        int64_t app_id=91;
-//
-//        char sCMD[1024];
-//        int len=::sprintf(sCMD, "{\"cmd\":\"appStart\",\"appID\":%lld,\"rid\":%lld,\"nodeID\":%d,\"hash\":\"%s\"}",app_id,room_id_,clientObjectID_,hash.CString());
-//        std::string sCommand(sCMD,len);
-//
-//
-//        facepower_->cmd(sCommand);
-//    }
 }
 
 int SceneReplication::OnEncodeAACFrame(uint8_t* buf,int len,int type)
@@ -988,10 +960,80 @@ void SceneReplication::HandleNetworkMessage(StringHash /*eventType*/, VariantMap
     
 }
 
-
 void SceneReplication::OnXRCommand(ptree pt)
 {
     const std::string cmd=pt.get("cmd","");
     
-
 }
+
+//改变模型avatar
+void SceneReplication::SetModel(int indexID,std::string const& avatar)
+{
+    auto* cache = GetSubsystem<ResourceCache>();
+    //get node
+    Node* objectNode=scene_->GetChild(indexID);
+    if(objectNode)
+    {
+        auto* character=objectNode->GetComponent<Character>();
+        
+        Node* adjustNode = objectNode->GetChild("AdjNode");
+        auto* object = adjustNode->GetComponent<AnimatedModel>();
+        
+        std::string modelPath;
+        if("def"==avatar||""==avatar)
+            modelPath="Models/def/";
+        else
+            modelPath="avatars/"+avatar+"/";
+        
+        std::string modelFile=modelPath+"a.mdl";
+        //auto* file=scene_->GetSubsystem<FileSystem>();
+        
+        Model* m=cache->GetResource<Model>(modelFile.c_str());
+        if(nullptr!=m)
+        {
+            character->SetAvatar(modelPath.c_str());
+            
+            object->SetModel(m);
+            const size_t slots=object->GetBatches().Size();
+            if(slots<1)
+            {
+                std::string mats=modelPath+"Materials/0.xml";
+                object->SetMaterial(cache->GetResource<Material>(mats.c_str()));
+            }else{
+                for(size_t i=0;i<slots;++i)
+                {
+                   // Materials
+                    char matlist[128];
+                    ::sprintf(matlist, "Materials/%d.xml", (int)i);
+                    std::string mats=modelPath+matlist;
+                    
+                    object->SetMaterial(i,cache->GetResource<Material>(mats.c_str()));
+                }
+            }
+        }else{//头像不存在 通知网络层 从服务器下载模型
+            
+            FileSystem * filesystem = GetSubsystem<FileSystem>();
+            String dir=filesystem->GetUserDocumentsDir();
+            #ifdef __ANDROID__
+                dir=String(facepower_->getStoragePath().c_str());
+            #endif
+            
+            dir+="xrchat/avatars/";
+
+
+            char sCommand[1024];
+            int len=::sprintf(sCommand, "{\"cmd\":\"avatarDownload\",\"index\":%lld,\"avatar\":\"%s\",\"path\":\"%s\"}", indexID,avatar.c_str(),dir.CString());
+                        
+            //facepower_->sendCustomData(2, (uint8_t*)sCommand, len);
+            
+            //先使用缺省的头像 等下载完成后再更改回来
+            SetModel(indexID,"");
+        }
+    }
+}
+void SceneReplication::HandleExit(StringHash eventType, VariantMap& eventData)
+{
+    //改变 avatar
+    this->SetModel(clientObjectID_, "Mutant");
+}
+
