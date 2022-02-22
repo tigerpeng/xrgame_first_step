@@ -139,7 +139,9 @@ private:
     
 
 protected:
+    void LoginP4SP(std::string cmdLogin);
     void AVReady(std::string const& avServer,std::string const& verify,std::string const& nodeName="",int matIndex=0);
+    
     void SetSpeaker(bool b)
     {
         broadcasting_audio_=b;
@@ -152,8 +154,11 @@ protected:
     
     void PreParseXRCommand();
     
-    unsigned                            clientObjectID_{};
+
     FacePowerPtr                        facepower_;
+    unsigned                            clientObjectID_{};
+    bool                                avReady_;
+    std::string                         debug_info_;
 private:
     void CheckSouderChange();
     void RecordXRCommand(std::string const& cmdStr);
@@ -169,9 +174,10 @@ private:
     
     std::queue<std::string>             cmd_que_;
     std::mutex                          cmd_mutex_;
-    bool                                avReady_;
+
     bool                                bMyEcho_;
     
+    int                                 open_camera_distn_;//打开视频的距离
     bool                                touch_rotate_;
     
 

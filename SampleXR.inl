@@ -57,12 +57,21 @@ Sample::Sample(Context* context) :
     facepower_=getFacePower();
     clientObjectID_=0;
     avReady_=false;
+    open_camera_distn_=10;
     broadcasting_video_=false;
     broadcasting_audio_=true;
     touch_rotate_=true;
     timer_counter_=std::chrono::steady_clock::now();
     
-    bMyEcho_=false;
+    bMyEcho_=false;//是否订阅自己的声音？ true 用于调试
+    
+    #if defined _WIN32
+
+    #elif defined  __APPLE__
+        //bMyEcho_=true;              //for debug
+    #elif defined __ANDROID__
+
+    #endif
 }
 
 void Sample::Setup()
@@ -488,10 +497,10 @@ void Sample::PreParseXRCommand()
             
             float distance=pos1.DistanceToPoint(pos2);
             
-            if(distance<2)
+            if(distance<open_camera_distn_)
             {   if(!broadcasting_video_)
                     BroadCastingVideo(true);
-            }else if(distance>2)
+            }else if(distance>open_camera_distn_)
             {
                 if(broadcasting_video_)
                     BroadCastingVideo(false);
@@ -573,9 +582,11 @@ void Sample::CheckSouderChange()
             size_t nodeID=souder->GetNode()->GetID();
             if(nodeID<0xFF)
             {
-                if(nodeID==clientObjectID_&&bMyEcho_)
-                    currSounder.insert(nodeID);//时候接受自己的音频回放
-                else
+                if(nodeID==clientObjectID_)
+                {
+                    if(bMyEcho_)
+                        currSounder.insert(nodeID);//时候接受自己的音频回放
+                }else
                     currSounder.insert(nodeID);
             }
                 
@@ -596,11 +607,13 @@ void Sample::CheckSouderChange()
                 sounders+=",";
             
             sounders+=std::to_string(subscribeNode[i]);
+            
+            debug_info_=sounders;
         }
         
         
         char sCMD[1024];
-        int len=::sprintf(sCMD, "{\"cmd\":\"updateSounder\",\"where\":\"91_MetaBreeze\",\"sounders\":[%s]}",sounders.c_str());
+        int len=::sprintf(sCMD, "{\"cmd\":\"subsSounder\",\"where\":\"91_MetaBreeze\",\"sounders\":[%s]}",sounders.c_str());
         std::string sCommand(sCMD,len);
         
         if(xrGroup_)
@@ -608,9 +621,16 @@ void Sample::CheckSouderChange()
     }
 }
 
+//大多数情况需要线登录
+void Sample::LoginP4SP(std::string cmdLogin)
+{
+    if(facepower_)
+        facepower_->cmd(cmdLogin);
+}
 //1 视频的model 名称
 //2 材质通道 TV 4
-void Sample::AVReady(std::string const& avServer,std::string const& verify,std::string const& nodeName,int matIndex)
+void Sample::AVReady(std::string const& avServer
+                     ,std::string const& verify,std::string const& nodeName,int matIndex)
 {
     
     if(!nodeName.empty())
